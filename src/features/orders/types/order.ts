@@ -1,24 +1,17 @@
-export type OrderStatus =
-  | 'Pendiente'
-  | 'En revisión'
-  | 'Procesado'
-  | 'Preparado'
-  | 'Despachado'
-  | 'Rechazado'
-  | 'Anulado'
+export type OrderStatus = string
 
 export interface Order {
-  amount: number
-  businessName: string
-  clientType: string
+  totalAmount: number
+  customerName: string
+  customerType: string
   comments: string | null
-  creationDate: string // dd/mm/aaaa
+  date: string // dd/mm/aaaa
   id: string
   orderNumber: string
-  seller: string
+  sellerName: string
   status: OrderStatus
-  tangoNumber: string | null
-  termDays: number
+  tangoOrderNumber: string | null
+  paymentTerm: number
 }
 
 export interface Client {

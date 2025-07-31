@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 
-import { parse, isBefore, isAfter, isValid } from 'date-fns'
+import { isBefore, isAfter, isValid } from 'date-fns'
 import { Plus } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -13,6 +13,7 @@ import { type Order } from '@/features/orders/types/order'
 import { DashboardLayout } from '@/layouts/dashboard-layout'
 import { AppProvider } from '@/shared/contexts/app-context'
 import { useQuery } from '@tanstack/react-query'
+import { parseDate } from '@/lib/utils'
 
 interface OrdersResponse {
   orders: Order[]
@@ -52,7 +53,9 @@ export default function OrdersPage() {
     // Filter by includeCancelledRejected
     if (!filters.includeCancelledRejected) {
       currentOrders = currentOrders.filter(
-        (order) => order.status !== 'Anulado' && order.status !== 'Rechazado',
+        (order) => 
+          order.status.toLowerCase() !== 'anulado' && 
+          order.status.toLowerCase() !== 'rechazado',
       )
     }
 
@@ -63,28 +66,32 @@ export default function OrdersPage() {
       currentOrders = currentOrders.filter(
         (order) =>
           order.orderNumber.toLowerCase().includes(lowerCaseSearch) ||
-          order.tangoNumber?.toLowerCase().includes(lowerCaseSearch),
+          order.tangoOrderNumber?.toLowerCase().includes(lowerCaseSearch),
       )
     }
 
     // Filter by client
     if (filters.client !== 'Todos') {
-      currentOrders = currentOrders.filter((order) => order.businessName === filters.client)
+      currentOrders = currentOrders.filter((order) => order.customerName === filters.client)
     }
 
     // Filter by seller
     if (filters.seller !== 'Todos') {
-      currentOrders = currentOrders.filter((order) => order.seller === filters.seller)
+      currentOrders = currentOrders.filter((order) => order.sellerName === filters.seller)
     }
 
     // Filter by status
     if (filters.status !== 'Todos (activos)') {
-      currentOrders = currentOrders.filter((order) => order.status === filters.status)
+      currentOrders = currentOrders.filter((order) => 
+        order.status.toLowerCase() === filters.status.toLowerCase()
+      )
     } else {
       // If "Todos (activos)" is selected, ensure only active statuses are shown
       if (!filters.includeCancelledRejected) {
         currentOrders = currentOrders.filter(
-          (order) => order.status !== 'Anulado' && order.status !== 'Rechazado',
+          (order) => 
+            order.status.toLowerCase() !== 'anulado' && 
+            order.status.toLowerCase() !== 'rechazado',
         )
       }
     }
@@ -92,20 +99,39 @@ export default function OrdersPage() {
     // Filter by date range
     if (filters.startDate || filters.endDate) {
       currentOrders = currentOrders.filter((order) => {
-        const orderDate = parse(order.creationDate, 'dd/MM/yyyy', new Date())
+        const orderDate = parseDate(order.date)
 
         if (!isValid(orderDate)) return false
 
         let matchesStartDate = true
-
-        if (filters.startDate) {
-          matchesStartDate = !isBefore(orderDate, filters.startDate)
-        }
-
         let matchesEndDate = true
 
+        if (filters.startDate) {
+          // La fecha del pedido debe ser mayor o igual a la fecha de inicio
+          matchesStartDate = orderDate >= filters.startDate
+        }
+
         if (filters.endDate) {
-          matchesEndDate = !isAfter(orderDate, filters.endDate)
+          // La fecha del pedido debe ser menor o igual a la fecha de fin
+          // Ajustamos la fecha de fin para incluir todo el día
+          const endOfDay = new Date(filters.endDate)
+          endOfDay.setHours(23, 59, 59, 999)
+          matchesEndDate = orderDate <= endOfDay
+        }
+
+        // Debug: Log para verificar el filtrado de fechas
+        if (order.orderNumber === '1008') { // Ejemplo con una fecha específica
+          console.log('Filtro de fechas:', {
+            orderNumber: order.orderNumber,
+            orderDate: order.date,
+            parsedOrderDate: orderDate,
+            startDate: filters.startDate,
+            endDate: filters.endDate,
+            endOfDay: filters.endDate ? new Date(filters.endDate).setHours(23, 59, 59, 999) : null,
+            matchesStartDate,
+            matchesEndDate,
+            finalResult: matchesStartDate && matchesEndDate
+          })
         }
 
         return matchesStartDate && matchesEndDate
@@ -114,8 +140,8 @@ export default function OrdersPage() {
 
     // Sort by creation date (oldest to newest)
     currentOrders.sort((a, b) => {
-      const dateA = parse(a.creationDate, 'dd/MM/yyyy', new Date())
-      const dateB = parse(b.creationDate, 'dd/MM/yyyy', new Date())
+      const dateA = parseDate(a.date)
+      const dateB = parseDate(b.date)
 
       return dateA.getTime() - dateB.getTime()
     })
