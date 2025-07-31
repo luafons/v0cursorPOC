@@ -8,9 +8,15 @@ import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { OrdersFilterBar } from '@/features/orders/components/orders-filter-bar'
 import { OrdersTable } from '@/features/orders/components/orders-table'
-import { mockClients, mockOrders, mockSellers } from '@/features/orders/data/mock-data'
+import { mockClients, mockSellers } from '@/features/orders/data/mock-data'
+import { type Order } from '@/features/orders/types/order'
 import { DashboardLayout } from '@/layouts/dashboard-layout'
 import { AppProvider } from '@/shared/contexts/app-context'
+import { useQuery } from '@tanstack/react-query'
+
+interface OrdersResponse {
+  orders: Order[]
+}
 
 export default function OrdersPage() {
   const [filters, setFilters] = useState({
@@ -23,8 +29,25 @@ export default function OrdersPage() {
     status: 'Todos (activos)',
   })
 
+  const {
+    data: ordersData,
+    isLoading,
+    error,
+  } = useQuery<OrdersResponse>({
+    queryKey: ['orders'],
+    queryFn: async () => {
+      const response = await fetch('/api/orders')
+      console.log(response)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      return response.json()
+    },
+  })
+
   const filteredOrders = useMemo(() => {
-    let currentOrders = [...mockOrders]
+    // Use API data if available, otherwise fallback to empty array
+    let currentOrders = ordersData?.orders || []
 
     // Filter by includeCancelledRejected
     if (!filters.includeCancelledRejected) {
@@ -98,7 +121,31 @@ export default function OrdersPage() {
     })
 
     return currentOrders
-  }, [filters])
+  }, [filters, ordersData])
+
+  if (isLoading) {
+    return (
+      <AppProvider>
+        <DashboardLayout>
+          <div className='flex items-center justify-center h-64'>
+            <div className='text-lg'>Cargando órdenes...</div>
+          </div>
+        </DashboardLayout>
+      </AppProvider>
+    )
+  }
+
+  if (error) {
+    return (
+      <AppProvider>
+        <DashboardLayout>
+          <div className='flex items-center justify-center h-64'>
+            <div className='text-lg text-red-600'>Error al cargar las órdenes</div>
+          </div>
+        </DashboardLayout>
+      </AppProvider>
+    )
+  }
 
   return (
     <AppProvider>
