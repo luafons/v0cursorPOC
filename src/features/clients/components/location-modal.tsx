@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { InteractiveMap } from "@/components/ui/interactive-map"
 import { MapPin, Navigation, Edit3, Search, CheckCircle, AlertCircle, Info } from "lucide-react"
 
 interface LocationData {
@@ -162,6 +163,19 @@ export function LocationModal({ isOpen, onClose, onLocationConfirm }: LocationMo
     getAddressFromCoords(lat, lng)
   }
 
+  // Función para manejar selección desde el mapa
+  const handleMapLocationSelect = (lat: number, lng: number) => {
+    const location: LocationData = {
+      latitude: lat,
+      longitude: lng,
+      timestamp: Date.now(),
+    }
+    setCurrentLocation(location)
+    setManualLat(lat.toString())
+    setManualLng(lng.toString())
+    getAddressFromCoords(lat, lng)
+  }
+
   // Función para confirmar ubicación
   const confirmLocation = () => {
     if (currentLocation) {
@@ -296,26 +310,33 @@ export function LocationModal({ isOpen, onClose, onLocationConfirm }: LocationMo
             </Button>
           </div>
 
-          {/* Sección: Mapa (simulado) */}
+          {/* Sección: Mapa Interactivo */}
           <div className="space-y-3">
-            <Label className="font-medium">🗺️ Vista del Mapa</Label>
+            <Label className="font-medium">🗺️ Mapa Interactivo</Label>
             
-            <div className="flex items-center gap-2 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-              <Info className="h-4 w-4 text-orange-600" />
-              <p className="text-sm text-orange-800">
-                <strong>¿Qué hace?</strong> Aquí se mostraría un mapa interactivo donde podrías hacer clic 
-                para seleccionar la ubicación. (Próximamente con OpenStreetMap)
+            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <Info className="h-4 w-4 text-green-600" />
+              <p className="text-sm text-green-800">
+                <strong>¿Qué hace?</strong> Haz clic en cualquier punto del mapa para seleccionar esa ubicación. 
+                El marcador rojo muestra tu ubicación actual o seleccionada.
               </p>
             </div>
             
-            <div className="h-64 bg-muted rounded-lg border-2 border-dashed border-muted-foreground/25 flex items-center justify-center">
-              <div className="text-center text-muted-foreground">
-                <MapPin className="h-8 w-8 mx-auto mb-2" />
-                <p className="text-sm font-medium">Mapa Interactivo</p>
-                <p className="text-xs">(OpenStreetMap + Leaflet)</p>
-                <p className="text-xs mt-1">Haz clic para seleccionar ubicación</p>
-                <p className="text-xs text-blue-600 mt-2">🚧 En desarrollo</p>
-              </div>
+            <div className="border rounded-lg overflow-hidden">
+              <InteractiveMap
+                latitude={currentLocation?.latitude || -34.6037}
+                longitude={currentLocation?.longitude || -58.3816}
+                onLocationSelect={handleMapLocationSelect}
+                height="300px"
+                className="w-full"
+              />
+            </div>
+            
+            <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+              <MapPin className="h-4 w-4 text-blue-600" />
+              <p className="text-xs text-blue-800">
+                💡 <strong>Tip:</strong> Puedes hacer zoom con la rueda del mouse y arrastrar para mover el mapa
+              </p>
             </div>
           </div>
 
