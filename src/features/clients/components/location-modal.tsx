@@ -27,7 +27,16 @@ export function LocationModal({ isOpen, onClose, onLocationConfirm }: LocationMo
   const [currentLocation, setCurrentLocation] = useState<LocationData | null>(null)
   const [manualLat, setManualLat] = useState("")
   const [manualLng, setManualLng] = useState("")
-  const [searchAddress, setSearchAddress] = useState("")
+  
+  // Estados para los campos de dirección
+  const [streetName, setStreetName] = useState("")
+  const [streetNumber, setStreetNumber] = useState("")
+  const [neighborhood, setNeighborhood] = useState("")
+  const [postalCode, setPostalCode] = useState("")
+  const [city, setCity] = useState("")
+  const [province, setProvince] = useState("")
+  const [country, setCountry] = useState("Argentina")
+  
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -99,16 +108,41 @@ export function LocationModal({ isOpen, onClose, onLocationConfirm }: LocationMo
     }
   }
 
+  // Función para construir la query de dirección
+  const buildAddressQuery = () => {
+    const parts = []
+    
+    if (streetName.trim()) {
+      const streetPart = streetNumber.trim() 
+        ? `${streetName.trim()} ${streetNumber.trim()}`
+        : streetName.trim()
+      parts.push(streetPart)
+    }
+    
+    if (neighborhood.trim()) parts.push(neighborhood.trim())
+    if (postalCode.trim()) parts.push(postalCode.trim())
+    if (city.trim()) parts.push(city.trim())
+    if (province.trim()) parts.push(province.trim())
+    if (country.trim()) parts.push(country.trim())
+    
+    return parts.join(", ")
+  }
+
   // Función para buscar dirección y obtener coordenadas
   const handleSearchAddress = async () => {
-    if (!searchAddress.trim()) return
+    const addressQuery = buildAddressQuery()
+    
+    if (!addressQuery.trim()) {
+      setError("Completa al menos un campo de dirección")
+      return
+    }
 
     setIsLoading(true)
     setError(null)
 
     try {
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchAddress)}&limit=1`
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressQuery)}&limit=1`
       )
       const data = await response.json()
 
@@ -245,21 +279,104 @@ export function LocationModal({ isOpen, onClose, onLocationConfirm }: LocationMo
             <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
               <Info className="h-4 w-4 text-green-600" />
               <p className="text-sm text-green-800">
-                <strong>¿Qué hace?</strong> Escribe una dirección y el sistema la convierte en coordenadas. 
-                Útil si conoces la dirección pero no las coordenadas.
+                <strong>¿Qué hace?</strong> Completa los campos de dirección que conozcas y el sistema buscará las coordenadas. 
+                Cuantos más campos completes, más precisa será la búsqueda. Todos los campos son opcionales.
               </p>
             </div>
             
-            <div className="flex gap-2">
-                             <Input
-                 placeholder="Ej: Av. Corrientes 123, Buenos Aires, Argentina"
-                 value={searchAddress}
-                 onChange={(e) => setSearchAddress(e.target.value)}
-                 onKeyPress={(e) => e.key === 'Enter' && handleSearchAddress()}
-               />
-               <Button onClick={handleSearchAddress} disabled={isLoading || !searchAddress.trim()}>
-                 🔍 Buscar
-               </Button>
+            <div className="space-y-3">
+              {/* Primera fila: Calle y Número */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="streetName">Calle</Label>
+                  <Input
+                    id="streetName"
+                    placeholder="Ej: Av. Corrientes"
+                    value={streetName}
+                    onChange={(e) => setStreetName(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearchAddress()}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="streetNumber">Número</Label>
+                  <Input
+                    id="streetNumber"
+                    placeholder="Ej: 123"
+                    value={streetNumber}
+                    onChange={(e) => setStreetNumber(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearchAddress()}
+                  />
+                </div>
+              </div>
+
+              {/* Segunda fila: Barrio y Código Postal */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="neighborhood">Barrio/Zona</Label>
+                  <Input
+                    id="neighborhood"
+                    placeholder="Ej: San Nicolás"
+                    value={neighborhood}
+                    onChange={(e) => setNeighborhood(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearchAddress()}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="postalCode">Código Postal</Label>
+                  <Input
+                    id="postalCode"
+                    placeholder="Ej: 1043"
+                    value={postalCode}
+                    onChange={(e) => setPostalCode(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearchAddress()}
+                  />
+                </div>
+              </div>
+
+              {/* Tercera fila: Ciudad y Provincia */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="city">Ciudad</Label>
+                  <Input
+                    id="city"
+                    placeholder="Ej: Buenos Aires"
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearchAddress()}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="province">Provincia</Label>
+                  <Input
+                    id="province"
+                    placeholder="Ej: CABA"
+                    value={province}
+                    onChange={(e) => setProvince(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearchAddress()}
+                  />
+                </div>
+              </div>
+
+              {/* Cuarta fila: País */}
+              <div className="space-y-1">
+                <Label htmlFor="country">País</Label>
+                <Input
+                  id="country"
+                  placeholder="Ej: Argentina"
+                  value={country}
+                  onChange={(e) => setCountry(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearchAddress()}
+                />
+              </div>
+
+              {/* Botón de búsqueda */}
+              <Button 
+                onClick={handleSearchAddress} 
+                disabled={isLoading || !buildAddressQuery().trim()}
+                className="w-full"
+              >
+                🔍 Buscar Dirección
+              </Button>
             </div>
           </div>
 
